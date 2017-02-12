@@ -1,0 +1,8 @@
+[package]
+name = "wish-shell"
+version = "0.1.0"
+authors = ["Taylor Foxhall <lxmachina@gmail.com>"]
+
+[dependencies]
+rustyline = "1.0.0"
+peg = "0.5.1"
