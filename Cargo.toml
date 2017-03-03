@@ -5,4 +5,4 @@ authors = ["Taylor Foxhall <lxmachina@gmail.com>"]
 
 [dependencies]
 rustyline = "1.0.0"
-peg = "0.5.1"
+nom = "^2.1"

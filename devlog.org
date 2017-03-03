@@ -1,0 +1,18 @@
+Grammar notes
+
+wish ::= <job> <expr>*
+job ::= <string>
+expr ::= <constant>
+       | <keyword>
+       | <app>
+constant ::= <number> | <string>
+app ::= (<expr>+)
+
+number ::= <sign> <real>
+real ::= <sign> <ureal>
+ureal ::= <uinteger> | <decimal>
+uinteger ::= <digit>+
+sign ::= <empty> | + | -
+
+string ::= "<strchr>*"
+strchr ::= <not (\ | ")>

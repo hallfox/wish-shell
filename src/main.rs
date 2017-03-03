@@ -6,6 +6,8 @@ use std::path::Path;
 use rustyline::error::ReadlineError;
 use rustyline::Editor;
 
+mod wish;
+
 fn main() {
     // `()` can be used when no completer is required
     let mut rl = Editor::<()>::new();
