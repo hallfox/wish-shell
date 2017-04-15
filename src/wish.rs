@@ -45,14 +45,23 @@ fn builtin_op(func: &str, args: &[WishVal]) -> WishResult {
                   }
             )
             .map(WishVal::Num),
-        "-" => args.iter()
-            .fold(Ok(0), |acc, v|
-                  match (acc, v) {
-                      (Ok(a), &WishVal::Num(x)) => Ok(a - x),
-                      _ => Err("Arguments to operator - are not numbers".to_string()),
-                  }
-            )
-            .map(WishVal::Num),
+        "-" => match args.split_first() {
+                None => Err("Too few args passed to -".to_string()),
+                Some((&WishVal::Num(f), rst)) =>
+                    if rst.len() == 0 {
+                        Ok(-f).map(WishVal::Num)
+                    } else {
+                        rst.iter()
+                            .fold(Ok(f), |acc, v|
+                                  match (acc, v) {
+                                      (Ok(a), &WishVal::Num(x)) => Ok(a - x),
+                                      _ => Err("Arguments to operator - are not numbers".to_string()),
+                                  }
+                            )
+                            .map(WishVal::Num)
+                    },
+                _ => Err("Arguments to operator - are not numbers".to_string())
+            },
         "*" => args.iter()
             .fold(Ok(1), |acc, v|
                   match (acc, v) {
