@@ -1,76 +1,59 @@
-#[macro_use]
-extern crate nom;
-
-use nom::{IResult, digit};
+use nom::*;
 
 use std::str;
-use std::str::FromString;
+use std::str::FromStr;
 
-mod wish;
-use wish::*;
+use wish::WishVal;
 
 // Grammar rules:
-// wish ::= <job> <expr>*
-// job ::= <string>
-// expr ::= <constant>
-//        | <keyword>
-//        | <app>
-// constant ::= <number> | <string>
-// app ::= (<expr>+)
-//
-// number ::= <sign> <real>
-// real ::= <sign> <ureal>
-// ureal ::= <uinteger> | <decimal>
-// uinteger ::= <digit>+
-// sign ::= <empty> | + | -
-//
-// string ::= "<strchr>*"
-// strchr ::= <not (\ | ")>
 
-// wish command, a binary/builtin with expressions
-named!(wish<Wish>, do_parse!(
-    cmd: job >>
-    args: many0!(wexpr) >>
-    Wish::new(cmd, args)
+// number : /-?[0-9]+/
+// Add floating points in the future
+named!(number <WishVal>,
+       map_res!(
+           map_res!(
+               ws!(digit),
+               str::from_utf8
+           ),
+           |n| {
+               FromStr::from_str(n).map(WishVal::Num)
+           }
+       )
+);
+
+// symbol : /[a-zA-Z0-9_+\\-*\\/\\\\=<>!&]+/
+static SYMBOL_CHARS: &'static str = "ABCDEFGHIJKLMNOPQRSTUVWXYZ\
+                                     abcdefghijklmnopqrstuvwxyz\
+                                     0123456789\
+                                     _-+*/\\=<>!&";
+named!(symbol <WishVal>,
+       map!(
+           many1!(one_of!(SYMBOL_CHARS)),
+           |res: Vec<_>| {
+               WishVal::Symbol(res.into_iter().collect())
+           }
+       )
+);
+
+// sexpr : '(' <expr> ')'
+named!(sexpr <WishVal>, map!(wexpr, WishVal::Sexpr));
+
+// primitive, will be used for both lists and sexprs
+named!(wexpr <Vec<WishVal>>, ws!(
+    delimited!(
+        tag!("("),
+        fold_many0!(ws!(expr), Vec::new(), |mut acc: Vec<_>, wval| {
+            acc.push(wval);
+            acc
+        }),
+        tag!(")")
+    )
 ));
 
-// wish expressions, lispy an prefixed
-named!(wexpr<Wexpr>, ws!(alt_complete!(
-    wconstant |
-    wkeyword |
-    wapp => { |res: Vec<Wexpr>| Wexpr::Wapp(res) }
-)));
+// expr : <number> | <symbol> | <sexpr>
+named!(expr <WishVal>,
+       alt_complete!(number | symbol | sexpr)
+);
 
-// wish constants
-named!(wconstant, alt_complete!(
-    wnum => { |res: f64| Wexpr::Wnum(res) } |
-    wstr => { |res: &[u8]| Wexpr::Wstring(res.to_owned()) }
-));
-
-// number parsing
-named!(wnum<f64>, map_res!(
-    map_res!(
-        ws!(digit),
-        str::from_utf8
-    ),
-    FromStr::from_str
-));
-
-// string literals
-named!(wstr<&[u8]>, delimited!(tag!("\""), take_until!("\""), tag!("\"")));
-
-// keywords and builtin fns
-named!(wkeyword<Wbuiltin>, alt_complete!(
-    tag!("+") => { |_| Wbuiltin::Add }
-    | tag!("-") => { |_| Wbuiltin::Sub }
-    | tag!("*") => { |_| Wbuiltin::Mul }
-    | tag!("/") => { |_| Wbuiltin::Div }
-    | tag!("cd") => { |_| Wbuiltin::Cd }
-));
-
-// Applied function
-named!(wapp<Vec<Wexpr> >, many1!(wexpr));
-
-pub fn interpret_wish(wish: &[u8]) {
-    try_parse!(wish)
-}
+// wish : /^/ <expr>* /$/
+named!(pub wish <WishVal>, map!(many0!(expr), WishVal::Sexpr));

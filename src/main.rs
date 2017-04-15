@@ -1,11 +1,14 @@
 extern crate rustyline;
+#[macro_use] extern crate nom;
 
 use std::process::Command;
 use std::env;
 use std::path::Path;
 use rustyline::error::ReadlineError;
 use rustyline::Editor;
+use nom::IResult;
 
+mod parser;
 mod wish;
 
 fn main() {
@@ -16,28 +19,35 @@ fn main() {
     }
     loop {
         // Prompt
-        let readline = rl.readline("wish #(");
+        let readline = rl.readline("wish # ");
         match readline {
             Ok(line) => {
                 rl.add_history_entry(&line);
                 // Eval
-                let mut cmd_tokens = line.split_whitespace();
-                if let Some(cmd) = cmd_tokens.next() {
-                    if cmd == "cd" {
-                        cd(cmd_tokens.next());
-                    } else {
-                        let args: Vec<_> = cmd_tokens.collect();
-                        let status = Command::new(cmd)
-                            .args(&args)
-                            .status()
-                            .expect("Failed to execute child");
-                            if !status.success() {
-                                if let Some(ec) = status.code() {
-                                    println!("{}", ec);
-                                }
-                            }
-                    }
-                }
+                match parser::wish(line.as_bytes()) {
+                    IResult::Done(_, wish_program) => {
+                        let res = wish_program.eval();
+                        println!("{:?}", res);
+                    },
+                    _ => println!("Syntax error!"),
+                };
+                // let mut cmd_tokens = line.split_whitespace();
+                // if let Some(cmd) = cmd_tokens.next() {
+                //     if cmd == "cd" {
+                //         cd(cmd_tokens.next());
+                //     } else {
+                //         let args: Vec<_> = cmd_tokens.collect();
+                //         let status = Command::new(cmd)
+                //             .args(&args)
+                //             .status()
+                //             .expect("Failed to execute child");
+                //             if !status.success() {
+                //                 if let Some(ec) = status.code() {
+                //                     println!("{}", ec);
+                //                 }
+                //             }
+                //     }
+                // }
             },
             Err(ReadlineError::Interrupted) => {
                 println!("Kill");
